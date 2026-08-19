@@ -202,20 +202,23 @@ class LaxasFitBLE:
 
     @staticmethod
     def build_packet(cmd: int, key: int, data: bytes = b"") -> bytes:
-        """Build a complete BLE command packet with checksum."""
-        pkt = bytearray(8 + len(data))
+        """Build a complete BLE command packet with checksum.
+
+        Format: [0xDF][Len_H][Len_L][Checksum][CmdID][Ver=1][Key][DataLen_H][DataLen_L][Data...]
+        """
+        dlen = len(data)
+        pkt = bytearray(9 + dlen)
         pkt[0] = HEADER_CMD
-        pkt[1] = ((len(data) + 5) >> 8) & 0xFF
-        pkt[2] = (len(data) + 5) & 0xFF
+        pkt[1] = ((dlen + 5) >> 8) & 0xFF
+        pkt[2] = (dlen + 5) & 0xFF
         pkt[3] = 0x00  # placeholder for checksum
         pkt[4] = cmd & 0xFF
         pkt[5] = PROTO_VER
         pkt[6] = key & 0xFF
-        pkt[7] = (len(data) >> 8) & 0xFF
-        if len(data) > 0:
-            pkt[8] = len(data) & 0xFF
-        if data:
-            pkt[8: 8 + len(data)] = data
+        pkt[7] = (dlen >> 8) & 0xFF
+        pkt[8] = dlen & 0xFF
+        if dlen > 0:
+            pkt[9: 9 + dlen] = data
         # Checksum: sum of all bytes, mod 256
         pkt[3] = sum(pkt) & 0xFF
         return bytes(pkt)
