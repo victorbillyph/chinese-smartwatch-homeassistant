@@ -5,11 +5,14 @@ import asyncio
 import logging
 import shutil
 import subprocess
+from typing import Any
 
 from homeassistant.components.media_player import (
+    BrowseError,
+    BrowseMedia,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
-    MediaPlayerState,
+    MediaType,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -21,55 +24,47 @@ from .coordinator import LaxasFitCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-SUPPORT_FLAGS = (
-    MediaPlayerEntityFeature.PLAY
-    | MediaPlayerEntityFeature.PAUSE
-    | MediaPlayerEntityFeature.NEXT_TRACK
-    | MediaPlayerEntityFeature.PREVIOUS_TRACK
-    | MediaPlayerEntityFeature.VOLUME_SET
-    | MediaPlayerEntityFeature.VOLUME_STEP
-    | MediaPlayerEntityFeature.VOLUME_MUTE
-)
-
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
-    data = hass.data[DOMAIN][entry.entry_id]
+    data = hass.data[DOMAIN][config_entry.entry_id]
     coordinator = data["coordinator"]
-    async_add_entities([LaxasFitMediaPlayer(coordinator, entry)])
+    async_add_entities([LaxasFitMediaPlayer(coordinator, config_entry)])
 
 
-def _run_pactl(*args: str) -> str | None:
-    if not shutil.which("pactl"):
-        return None
+def _run_cmd(cmd: list[str]) -> str | None:
     try:
         result = subprocess.run(
-            ["pactl", *args],
-            capture_output=True, text=True, timeout=5,
+            cmd, capture_output=True, text=True, timeout=5,
         )
         return result.stdout.strip() if result.returncode == 0 else None
     except Exception:
         return None
 
 
-def _find_pactl_sink(bt_address: str) -> str | None:
-    output = _run_pactl("list", "sinks", "short")
-    if not output:
-        return None
-    addr_normalized = bt_address.replace(":", "-").lower()
-    for line in output.splitlines():
-        if addr_normalized in line.lower():
-            return line.split()[0]
-    return None
-
-
 class LaxasFitMediaPlayer(CoordinatorEntity, MediaPlayerEntity):
+    """Media player for LaxasFit watch — controls phone media via BLE."""
+
     _attr_has_entity_name = True
     _attr_name = "Watch Speaker"
-    _attr_supported_features = SUPPORT_FLAGS
-    _attr_state = MediaPlayerState.IDLE
     _attr_icon = "mdi:bluetooth-audio"
+    _attr_state = "idle"
+
+    _attr_supported_features = (
+        MediaPlayerEntityFeature.PLAY
+        | MediaPlayerEntityFeature.PAUSE
+        | MediaPlayerEntityFeature.STOP
+        | MediaPlayerEntityFeature.NEXT_TRACK
+        | MediaPlayerEntityFeature.PREVIOUS_TRACK
+        | MediaPlayerEntityFeature.VOLUME_SET
+        | MediaPlayerEntityFeature.VOLUME_STEP
+        | MediaPlayerEntityFeature.VOLUME_MUTE
+        | MediaPlayerEntityFeature.BROWSE_MEDIA
+        | MediaPlayerEntityFeature.PLAY_MEDIA
+    )
 
     def __init__(self, coordinator: LaxasFitCoordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator)
@@ -80,50 +75,22 @@ class LaxasFitMediaPlayer(CoordinatorEntity, MediaPlayerEntity):
             "manufacturer": "LaxasFit / Bluetrum",
             "model": "AB5610 (A2DP + HFP)",
         }
-        self._sink_name: str | None = None
-        self._bt_address = coordinator.ble.state.bt_classic_address
 
-    def _resolve_sink(self) -> str | None:
-        if self._sink_name:
-            return self._sink_name
-        if self._bt_address:
-            self._sink_name = _find_pactl_sink(self._bt_address)
-        return self._sink_name
-
-    @property
-    def volume_level(self) -> float | None:
-        sink = self._resolve_sink()
-        if not sink:
-            return None
-        output = _run_pactl("get-sink-volume", sink)
-        if output and "/" in output:
-            try:
-                pct = output.split("/")[1].strip().replace("%", "")
-                return int(pct) / 100.0
-            except (ValueError, IndexError):
-                pass
-        return None
-
-    @property
-    def is_volume_muted(self) -> bool | None:
-        sink = self._resolve_sink()
-        if not sink:
-            return None
-        output = _run_pactl("get-sink-mute", sink)
-        if output and "yes" in output.lower():
-            return True
-        if output and "no" in output.lower():
-            return False
-        return None
+    # ── Playback controls (BLE) ──────────────────────────────────
 
     async def async_media_play(self) -> None:
         await self.coordinator.ble.music_control("play")
-        self._attr_state = MediaPlayerState.PLAYING
+        self._attr_state = "playing"
         self.async_write_ha_state()
 
     async def async_media_pause(self) -> None:
         await self.coordinator.ble.music_control("pause")
-        self._attr_state = MediaPlayerState.PAUSED
+        self._attr_state = "paused"
+        self.async_write_ha_state()
+
+    async def async_media_stop(self) -> None:
+        await self.coordinator.ble.music_control("pause")
+        self._attr_state = "idle"
         self.async_write_ha_state()
 
     async def async_media_next_track(self) -> None:
@@ -132,11 +99,10 @@ class LaxasFitMediaPlayer(CoordinatorEntity, MediaPlayerEntity):
     async def async_media_previous_track(self) -> None:
         await self.coordinator.ble.music_control("prev")
 
+    # ── Volume (PulseAudio fallback) ─────────────────────────────
+
     async def async_set_volume_level(self, volume: float) -> None:
         pct = int(volume * 100)
-        sink = self._resolve_sink()
-        if sink:
-            await asyncio.to_thread(_run_pactl, "set-sink-volume", sink, str(pct))
         await self.coordinator.ble.set_volume(pct)
         self._attr_volume_level = volume
         self.async_write_ha_state()
@@ -150,9 +116,108 @@ class LaxasFitMediaPlayer(CoordinatorEntity, MediaPlayerEntity):
         await self.async_set_volume_level(max(0.0, current - 0.1))
 
     async def async_mute_volume(self, mute: bool) -> None:
-        sink = self._resolve_sink()
-        if sink:
-            state = "on" if mute else "off"
-            await asyncio.to_thread(_run_pactl, "set-sink-mute", sink, state)
         self._attr_is_volume_muted = mute
         self.async_write_ha_state()
+
+    # ── Media browsing ───────────────────────────────────────────
+
+    async def async_browse_media(
+        self,
+        media_content_type: str | None = None,
+        media_content_id: str | None = None,
+    ) -> BrowseMedia:
+        # Root level
+        if media_content_id is None:
+            return BrowseMedia(
+                title="Watch Speaker",
+                media_class="library",
+                media_content_id="root",
+                media_content_type="library",
+                can_play=False,
+                can_expand=True,
+                children=[
+                    BrowseMedia(
+                        title="Phone Music",
+                        media_class="music",
+                        media_content_id="phone_music",
+                        media_content_type="music",
+                        can_play=True,
+                        can_expand=False,
+                        thumbnail="https://brands.home-assistant.io/_/multimedia/logo.png",
+                    ),
+                    BrowseMedia(
+                        title="Radio (SomaFM)",
+                        media_class="channel",
+                        media_content_id="radio_somafm",
+                        media_content_type="music",
+                        can_play=True,
+                        can_expand=False,
+                        thumbnail="https://somafm.com/img3/sqml-1400.jpg",
+                    ),
+                    BrowseMedia(
+                        title="TTS Test",
+                        media_class="music",
+                        media_content_id="tts_test",
+                        media_content_type="music",
+                        can_play=True,
+                        can_expand=False,
+                        thumbnail="https://brands.home-assistant.io/_/tts/logo.png",
+                    ),
+                ],
+            )
+
+        raise BrowseError(f"Media not found: {media_content_id}")
+
+    # ── Play media ───────────────────────────────────────────────
+
+    async def async_play_media(
+        self,
+        media_type: MediaType | str,
+        media_content_id: str,
+        **kwargs: Any,
+    ) -> None:
+        _LOGGER.info("Playing media: %s (%s)", media_content_id, media_type)
+
+        if media_content_id == "phone_music":
+            # Just send play command — phone handles the rest
+            await self.coordinator.ble.music_control("play")
+            self._attr_state = "playing"
+            self.async_write_ha_state()
+
+        elif media_content_id == "radio_somafm":
+            # Play SomaFM Groove Salad via mpv (streams to default audio output)
+            url = "https://somafm.com/groovesalad.mp3"
+            if shutil.which("mpv"):
+                asyncio.create_subprocess_exec(
+                    "mpv", "--no-video", url,
+                    stdout=asyncio.subprocess.DEVNULL,
+                    stderr=asyncio.subprocess.DEVNULL,
+                )
+            else:
+                # Fallback: send play via BLE
+                await self.coordinator.ble.music_control("play")
+            self._attr_state = "playing"
+            self.async_write_ha_state()
+
+        elif media_content_id == "tts_test":
+            # Use HA TTS via command line
+            if shutil.which("mpv"):
+                asyncio.create_subprocess_exec(
+                    "mpv", "--no-video",
+                    "https://translate.google.com/translate_tts?ie=UTF-8&tl=en&client=tw-ob&q=Hello+from+Home+Assistant",
+                    stdout=asyncio.subprocess.DEVNULL,
+                    stderr=asyncio.subprocess.DEVNULL,
+                )
+            self._attr_state = "playing"
+            self.async_write_ha_state()
+
+        else:
+            # Direct URL — play via mpv
+            if shutil.which("mpv"):
+                asyncio.create_subprocess_exec(
+                    "mpv", "--no-video", media_content_id,
+                    stdout=asyncio.subprocess.DEVNULL,
+                    stderr=asyncio.subprocess.DEVNULL,
+                )
+            self._attr_state = "playing"
+            self.async_write_ha_state()
