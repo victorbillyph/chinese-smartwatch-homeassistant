@@ -2,13 +2,11 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-import voluptuous as vol
 
 from .ble_protocol import LaxasFitBLE
 from .const import DOMAIN
@@ -19,6 +17,7 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.BINARY_SENSOR,
+    Platform.NOTIFY,
     Platform.BUTTON,
     Platform.SWITCH,
     Platform.SELECT,
@@ -73,33 +72,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.info("Watch address updated: %s → %s", address, ble.address)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
-    # Register notification service
-    async def async_send_notification(call) -> None:
-        message = call.data.get("message", "")
-        title = call.data.get("title", "HA")
-        msg_type = call.data.get("type", "other")
-
-        data = hass.data[DOMAIN].get(entry.entry_id)
-        if not data:
-            return
-        ble = data["ble"]
-        if not ble.connected:
-            _LOGGER.warning("Watch not connected, cannot send notification")
-            return
-        await ble.send_notification(msg_type, title, message)
-
-    hass.services.async_register(
-        DOMAIN,
-        "send_notification",
-        async_send_notification,
-        schema=vol.Schema({
-            vol.Required("message"): str,
-            vol.Optional("title", default="HA"): str,
-            vol.Optional("type", default="other"): str,
-        }),
-    )
-
     return True
 
 
