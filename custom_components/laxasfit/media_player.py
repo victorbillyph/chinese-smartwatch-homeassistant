@@ -1,4 +1,4 @@
-"""Media player entity for LaxasFit BLE Watch with A2DP/BT Classic support."""
+"""Media player entity for LaxasFit BLE Watch."""
 from __future__ import annotations
 
 import asyncio
@@ -7,7 +7,6 @@ import shutil
 import subprocess
 
 from homeassistant.components.media_player import (
-    BrowseMedia,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
@@ -30,8 +29,6 @@ SUPPORT_FLAGS = (
     | MediaPlayerEntityFeature.VOLUME_SET
     | MediaPlayerEntityFeature.VOLUME_STEP
     | MediaPlayerEntityFeature.VOLUME_MUTE
-    | MediaPlayerEntityFeature.BROWSE_MEDIA
-    | MediaPlayerEntityFeature.PLAY_MEDIA
 )
 
 
@@ -44,7 +41,6 @@ async def async_setup_entry(
 
 
 def _run_pactl(*args: str) -> str | None:
-    """Run a pactl command and return stdout, or None on failure."""
     if not shutil.which("pactl"):
         return None
     try:
@@ -58,7 +54,6 @@ def _run_pactl(*args: str) -> str | None:
 
 
 def _find_pactl_sink(bt_address: str) -> str | None:
-    """Find the PulseAudio sink name for the BT device."""
     output = _run_pactl("list", "sinks", "short")
     if not output:
         return None
@@ -70,8 +65,6 @@ def _find_pactl_sink(bt_address: str) -> str | None:
 
 
 class LaxasFitMediaPlayer(CoordinatorEntity, MediaPlayerEntity):
-    """Media player for LaxasFit watch."""
-
     _attr_has_entity_name = True
     _attr_name = "Watch Speaker"
     _attr_supported_features = SUPPORT_FLAGS
@@ -162,45 +155,4 @@ class LaxasFitMediaPlayer(CoordinatorEntity, MediaPlayerEntity):
             state = "on" if mute else "off"
             await asyncio.to_thread(_run_pactl, "set-sink-mute", sink, state)
         self._attr_is_volume_muted = mute
-        self.async_write_ha_state()
-
-    async def async_browse_media(
-        self, media_content_id: str | None = None, media_content_type: str | None = None
-    ) -> BrowseMedia:
-        """Return an empty media browse — the watch has no local media."""
-        return BrowseMedia(
-            title="Watch Speaker",
-            media_content_id="",
-            media_content_type="music",
-            can_play=False,
-            can_expand=False,
-        )
-
-    async def async_play_media(
-        self, media_type: str | None, media_id: str | None, **kwargs
-    ) -> None:
-        """Play media through the watch speaker."""
-        if not media_id:
-            return
-
-        _LOGGER.info("Playing media: %s", media_id)
-
-        # Try to route audio via mpv to BT sink
-        sink = self._resolve_sink()
-        if sink and shutil.which("mpv"):
-            cmd = [
-                "mpv", "--no-video",
-                f"--audio-device=pulse/{sink}",
-                media_id,
-            ]
-            asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL,
-            )
-        else:
-            # Fallback: just send play command via BLE
-            await self.coordinator.ble.music_control("play")
-
-        self._attr_state = MediaPlayerState.PLAYING
         self.async_write_ha_state()
