@@ -1,0 +1,21 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "LaxasFit BLE Watch",
+        "description": "Select your watch from the BLE scan results, or enter the MAC address manually.",
+        "data": {
+          "address": "Bluetooth Address",
+          "name": "Watch Name"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the watch",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "This watch is already configured"
+    }
+  }
+}

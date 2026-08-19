@@ -1,0 +1,10 @@
+{
+  "domain": "laxasfit",
+  "name": "LaxasFit BLE Watch",
+  "codeowners": [],
+  "config_flow": true,
+  "documentation": null,
+  "iot_class": "local_push",
+  "requirements": [],
+  "version": "0.1.0"
+}

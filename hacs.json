@@ -1,0 +1,9 @@
+{
+  "name": "LaxasFit BLE Smart Watch",
+  "render_readme": true,
+  "filename": "custom_components/laxasfit/manifest.json",
+  "content_in_header": false,
+  "categories": [
+    "Integration"
+  ]
+}

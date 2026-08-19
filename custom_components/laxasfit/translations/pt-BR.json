@@ -1,0 +1,21 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Relogio LaxasFit BLE",
+        "description": "Selecione seu relogio nos resultados do scan BLE, ou digite o endereco MAC manualmente.",
+        "data": {
+          "address": "Endereco Bluetooth",
+          "name": "Nome do Relogio"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Falha ao conectar no relogio",
+      "unknown": "Erro inesperado"
+    },
+    "abort": {
+      "already_configured": "Este relogio ja esta configurado"
+    }
+  }
+}

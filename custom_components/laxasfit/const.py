@@ -1,0 +1,193 @@
+"""Constants for the LaxasFit BLE Watch integration."""
+
+DOMAIN = "laxasfit"
+
+# BLE UUIDs
+SERVICE_UUID = "6E400001-B5A3-F393-E0A9-E50E24DCCA9F"
+WRITE_CHAR = "6E400002-B5A3-F393-E0A9-E50E24DCCA9F"
+NOTIFY_CHAR = "6E400003-B5A3-F393-E0A9-E50E24DCCA9F"
+
+# Device Information
+FW_REV_UUID = "00002A26-0000-1000-8000-00805F9B34FB"
+HW_REV_UUID = "00002A27-0000-1000-8000-00805F9B34FB"
+PLAT_REV_UUID = "00002A25-0000-1000-8000-00805F9B34FB"
+FEATURE_UUID = "00002A28-0000-1000-8000-00805F9B34FB"
+
+# Battery
+BATTERY_UUID = "00002A19-0000-1000-8000-00805F9B34FB"
+
+# Protocol
+HEADER_CMD = 0xDF
+HEADER_ACK = 0xFD
+PROTO_VER = 1
+
+# Command IDs
+CMD_OTA = 1
+CMD_SETTING = 2
+CMD_BIND = 3
+CMD_UNBIND = 4
+CMD_SPORT = 5
+CMD_RESET = 6
+CMD_FACTORY_TEST = 7
+CMD_ALARM = 8
+CMD_DEV_SETTING = 9
+CMD_FLASH_READ = 10
+CMD_DEVICE_TEST = 11
+CMD_DEV_CTRL = 12
+CMD_RESTORE_FACTORY = 13
+CMD_WATCH_FACE = 15
+CMD_DRINK = 17
+CMD_MSG_NOTIFY = 18
+CMD_OTA_NEW = 19
+CMD_SEDENTARY = 20
+CMD_GET_FEATURE = 25
+CMD_GET_FUNC = 26
+
+# Setting sub-keys (cmd=0x02)
+SET_TIME = 1
+SET_ALARM = 2
+SET_SPORT_TARGET = 3
+SET_PROFILE = 4
+SET_SEDENTARY = 5
+SET_WEARING_WAY = 6
+SET_NOTIFY_OLD = 7
+SET_POWER_SAVE = 8
+SET_RAISE_WAKE = 9
+SET_BT_PAIR = 10
+SET_FIND_BRACE = 11
+SET_REMOTE_CAMERA = 12
+SET_HR_ON = 13
+SET_BP_ON = 14
+SET_NOTIFY_NEW = 15
+SET_SLEEP_MONITOR = 15  # same key, different context
+SET_INCOMING_CALL = 17
+SET_MSG_PUSH = 18
+SET_WEATHER = 19
+SET_DND = 20
+SET_LANGUAGE = 21
+SET_HR_AUTO = 22
+SET_TEMP_AUTO = 24
+SET_TEMP_ON = 25
+SET_HOUR_FORMAT = 26
+SET_UNIT = 27
+SET_SPO2_ON = 28
+SET_WEATHER_TODAY = 29
+SET_TEMP_UNIT = 30
+SET_SOS = 31
+SET_DRINK_REMIND = 33
+SET_MSG_NOTIFY_EXT = 34
+SET_WEATHER_7DAY = 35
+SET_USER_NAME = 36
+SET_PAYMENT_QR = 38
+SET_SOCIAL_QR = 39
+SET_ALLDAY_LIGHT = 58
+SET_ALLDAY_DND = 59
+
+# Device control sub-codes (cmd=0x0C)
+CTRL_FIND_PHONE = 1
+CTRL_ENTER_CAMERA = 3
+CTRL_EXIT_CAMERA = 4
+CTRL_CLOSE_HR = 5
+CTRL_CLOSE_BP = 6
+CTRL_CLOSE_TEMP = 14
+CTRL_CLOSE_SPO2 = 16
+CTRL_BIND_ACCEPT = 8
+CTRL_BIND_REJECT = 9
+CTRL_MUSIC_PLAY = 10
+CTRL_MUSIC_PAUSE = 11
+CTRL_MUSIC_NEXT = 12
+CTRL_MUSIC_PREV = 13
+CTRL_BT_STATUS = 18
+CTRL_BT_BOND = 19
+CTRL_EXIT_FIND = 15
+
+# Sport sub-keys (cmd=0x05)
+SPORT_STEPS = 2
+SPORT_HR = 4
+SPORT_BP = 5
+SPORT_HISTORY_START = 7
+SPORT_HISTORY_END = 8
+SPORT_SLEEP = 9
+SPORT_REALTIME_STEP = 12
+SPORT_TEMP = 13
+SPORT_SPO2 = 14
+SPORT_MODE = 15
+
+# Watch face sub-keys (cmd=0x0F)
+WF_QUERY = 1
+WF_LIST = 2
+WF_SET = 3
+WF_CUSTOM_QUERY = 4
+WF_CUSTOM_SET = 5
+
+# Notification type IDs
+MSG_SMS = 1
+MSG_QQ = 2
+MSG_WECHAT = 3
+MSG_FACEBOOK = 4
+MSG_TWITTER = 5
+MSG_SKYPE = 6
+MSG_LINE = 7
+MSG_WHATSAPP = 8
+MSG_KAKAOTALK = 9
+MSG_INSTAGRAM = 10
+MSG_VIBER = 11
+MSG_ZALO = 12
+MSG_OTHER = 13
+MSG_DINGDING = 14
+MSG_WEIBO = 15
+MSG_ALIPAY = 16
+MSG_TEAMS = 17
+MSG_SNAPCHAT = 18
+MSG_MESSENGER = 19
+MSG_LINKEDIN = 20
+MSG_TELEGRAM = 21
+MSG_VK = 22
+MSG_OUTLOOK = 23
+
+MSG_TYPE_MAP = {
+    "sms": MSG_SMS, "qq": MSG_QQ, "wechat": MSG_WECHAT,
+    "facebook": MSG_FACEBOOK, "twitter": MSG_TWITTER,
+    "skype": MSG_SKYPE, "line": MSG_LINE, "whatsapp": MSG_WHATSAPP,
+    "kakaotalk": MSG_KAKAOTALK, "instagram": MSG_INSTAGRAM,
+    "viber": MSG_VIBER, "zalo": MSG_ZALO, "other": MSG_OTHER,
+    "dingding": MSG_DINGDING, "weibo": MSG_WEIBO,
+    "alipay": MSG_ALIPAY, "teams": MSG_TEAMS,
+    "snapchat": MSG_SNAPCHAT, "messenger": MSG_MESSENGER,
+    "linkedin": MSG_LINKEDIN, "telegram": MSG_TELEGRAM,
+    "vk": MSG_VK, "outlook": MSG_OUTLOOK,
+}
+
+# Languages
+LANGUAGES = {
+    0: "English", 1: "Chinese (Simplified)", 2: "Chinese (Traditional)",
+    3: "French", 4: "Spanish", 5: "Polish", 6: "Portuguese",
+    7: "Italian", 8: "German", 9: "Dutch", 10: "Turkish",
+    11: "Russian", 12: "Czech", 13: "Farsi", 14: "Hungarian",
+    15: "Greek", 16: "Arabic", 17: "Filipino", 18: "Malay",
+    19: "Indonesian", 20: "Vietnamese", 21: "Thai", 22: "Burmese",
+    23: "Hindi", 24: "Korean", 25: "Japanese", 26: "Swedish",
+    27: "Hebrew", 28: "Finnish", 29: "Ukrainian", 30: "Croatian",
+    31: "Khmer", 32: "Bulgarian", 34: "Danish", 35: "Romanian",
+    36: "Slovenian",
+}
+
+# Sport modes
+SPORT_MODES = {
+    0: "Running", 1: "Rope Skipping", 2: "Sit-ups", 3: "Cycling",
+}
+
+# Default poll interval (seconds)
+DEFAULT_SCAN_TIMEOUT = 30
+CONNECT_TIMEOUT = 15
+CMD_TIMEOUT = 5
+
+# BT Classic address derivation: last byte XOR 0x55
+BT_CLASSIC_XOR = 0x55
+
+# Media player states (mapped from MediaPlayerState)
+HA_STATE_MAP = {
+    "playing": "playing",
+    "paused": "paused",
+    "idle": "idle",
+}
