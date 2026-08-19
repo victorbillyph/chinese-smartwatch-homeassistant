@@ -132,8 +132,8 @@ class LaxasFitMediaPlayer(CoordinatorEntity, MediaPlayerEntity):
 
     async def async_play_media(
         self,
-        media_type: MediaType | str,
-        media_content_id: str,
+        media_type: MediaType | str | None = None,
+        media_content_id: str | None = None,
         **kwargs: Any,
     ) -> None:
         if media_source.is_media_source_id(media_content_id):
