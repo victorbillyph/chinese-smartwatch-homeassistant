@@ -334,20 +334,14 @@ class LaxasFitBLE:
         import datetime
         now = datetime.datetime.now()
         y = now.year - 2000
-        data = bytearray(6)
-        data[0] = y
-        data[1] = now.month
-        data[2] = now.day
-        data[3] = now.hour
-        data[4] = now.minute
-        data[5] = now.second
-        # Pack into 4 bytes: MMYYYY as BCD-ish, then HH, MM, SS
-        packed = bytearray(4)
-        packed[0] = (now.month << 4) | (y & 0x0F)
-        packed[1] = (now.day << 4) | ((y >> 4) & 0x0F)
-        packed[2] = (now.hour << 4) | (now.minute >> 4)
-        packed[3] = ((now.minute & 0x0F) << 4) | (now.second >> 4)
-        ok, _ = await self.send_command(CMD_SETTING, SET_TIME, bytes(packed))
+        mo, d2, h, mi, s = now.month, now.day, now.hour, now.minute, now.second
+        packed = bytes([
+            ((y << 2) + ((mo & 0xFF) >> 2)),
+            (((mo & 3) << 6) + (d2 << 1) + (h >> 4)),
+            (((h & 15) << 4) + (mi >> 2)),
+            (((mi & 3) << 6) + s),
+        ])
+        ok, _ = await self.send_command(CMD_SETTING, SET_TIME, packed)
         return ok
 
     async def request_ota_info(self) -> bytes:

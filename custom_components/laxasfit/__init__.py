@@ -35,10 +35,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not connected:
         raise ConfigEntryNotReady(f"Could not connect to watch {address}")
 
-    await ble.read_device_info()
-    await ble.read_battery()
-    await ble.bind()
-    await ble.sync_time()
+    try:
+        await ble.read_device_info()
+    except Exception as err:
+        _LOGGER.warning("Failed to read device info: %s", err)
+
+    try:
+        await ble.read_battery()
+    except Exception as err:
+        _LOGGER.warning("Failed to read battery: %s", err)
+
+    try:
+        await ble.bind()
+    except Exception as err:
+        _LOGGER.warning("Failed to bind: %s", err)
+
+    try:
+        await ble.sync_time()
+    except Exception as err:
+        _LOGGER.warning("Failed to sync time: %s", err)
 
     coordinator = LaxasFitCoordinator(hass, entry, ble)
     await coordinator.async_config_entry_first_refresh()
