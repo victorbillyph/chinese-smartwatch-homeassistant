@@ -6,12 +6,17 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from homeassistant.components.sensor import (
+    SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfLength
+from homeassistant.const import (
+    PERCENTAGE,
+    UnitOfLength,
+    UnitOfTime,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -20,14 +25,6 @@ from .const import DOMAIN
 from .coordinator import LaxasFitCoordinator
 
 _LOGGER = logging.getLogger(__name__)
-
-try:
-    from homeassistant.components.sensor import SensorDeviceClass
-    _SDC_BATTERY = SensorDeviceClass.BATTERY
-    _SDC_TEMP = SensorDeviceClass.TEMPERATURE
-except ImportError:
-    _SDC_BATTERY = None
-    _SDC_TEMP = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -48,6 +45,7 @@ SENSOR_DESCRIPTIONS: tuple[LaxasFitSensorEntityDescription, ...] = (
         key="distance",
         name="Distance",
         icon="mdi:map-marker-distance",
+        device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfLength.METERS,
         value_fn=lambda c: c.ble.state.distance,
@@ -56,6 +54,7 @@ SENSOR_DESCRIPTIONS: tuple[LaxasFitSensorEntityDescription, ...] = (
         key="calories",
         name="Calories",
         icon="mdi:fire",
+        device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement="kcal",
         value_fn=lambda c: c.ble.state.calories,
@@ -89,14 +88,14 @@ SENSOR_DESCRIPTIONS: tuple[LaxasFitSensorEntityDescription, ...] = (
         name="Blood Oxygen",
         icon="mdi:water-percent",
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="%",
+        native_unit_of_measurement=PERCENTAGE,
         value_fn=lambda c: c.ble.state.spo2,
     ),
     LaxasFitSensorEntityDescription(
         key="temperature",
         name="Body Temperature",
         icon="mdi:thermometer",
-        device_class=_SDC_TEMP,
+        device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement="°C",
         value_fn=lambda c: c.ble.state.temperature,
@@ -105,25 +104,27 @@ SENSOR_DESCRIPTIONS: tuple[LaxasFitSensorEntityDescription, ...] = (
         key="battery",
         name="Battery",
         icon="mdi:battery",
-        device_class=_SDC_BATTERY,
+        device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="%",
+        native_unit_of_measurement=PERCENTAGE,
         value_fn=lambda c: c.ble.state.battery,
     ),
     LaxasFitSensorEntityDescription(
         key="deep_sleep",
         name="Deep Sleep",
         icon="mdi:sleep",
+        device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="min",
+        native_unit_of_measurement=UnitOfTime.MINUTES,
         value_fn=lambda c: c.ble.state.deep_sleep_min,
     ),
     LaxasFitSensorEntityDescription(
         key="light_sleep",
         name="Light Sleep",
         icon="mdi:sleep",
+        device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="min",
+        native_unit_of_measurement=UnitOfTime.MINUTES,
         value_fn=lambda c: c.ble.state.light_sleep_min,
     ),
     LaxasFitSensorEntityDescription(
@@ -144,8 +145,9 @@ SENSOR_DESCRIPTIONS: tuple[LaxasFitSensorEntityDescription, ...] = (
         key="sport_duration",
         name="Sport Duration",
         icon="mdi:timer",
+        device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="s",
+        native_unit_of_measurement=UnitOfTime.SECONDS,
         value_fn=lambda c: c.ble.state.sport_duration,
     ),
 )
@@ -159,11 +161,10 @@ async def async_setup_entry(
     data = hass.data[DOMAIN][entry.entry_id]
     coordinator: LaxasFitCoordinator = data["coordinator"]
 
-    entities = []
-    for desc in SENSOR_DESCRIPTIONS:
-        entities.append(
-            LaxasFitSensor(coordinator, entry, desc)
-        )
+    entities = [
+        LaxasFitSensor(coordinator, entry, desc)
+        for desc in SENSOR_DESCRIPTIONS
+    ]
 
     async_add_entities(entities)
 
