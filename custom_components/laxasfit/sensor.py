@@ -6,13 +6,12 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from homeassistant.components.sensor import (
-    SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfLength, UnitOfMass
+from homeassistant.const import UnitOfLength
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -21,6 +20,14 @@ from .const import DOMAIN
 from .coordinator import LaxasFitCoordinator
 
 _LOGGER = logging.getLogger(__name__)
+
+try:
+    from homeassistant.components.sensor import SensorDeviceClass
+    _SDC_BATTERY = SensorDeviceClass.BATTERY
+    _SDC_TEMP = SensorDeviceClass.TEMPERATURE
+except ImportError:
+    _SDC_BATTERY = None
+    _SDC_TEMP = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -57,7 +64,6 @@ SENSOR_DESCRIPTIONS: tuple[LaxasFitSensorEntityDescription, ...] = (
         key="heart_rate",
         name="Heart Rate",
         icon="mdi:heart-pulse",
-        device_class=SensorDeviceClass.HEART_RATE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement="bpm",
         value_fn=lambda c: c.ble.state.heart_rate,
@@ -66,7 +72,6 @@ SENSOR_DESCRIPTIONS: tuple[LaxasFitSensorEntityDescription, ...] = (
         key="blood_pressure_sys",
         name="Blood Pressure Systolic",
         icon="mdi:heart",
-        device_class=SensorDeviceClass.BLOOD_PRESSURE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement="mmHg",
         value_fn=lambda c: c.ble.state.blood_pressure_sys,
@@ -75,7 +80,6 @@ SENSOR_DESCRIPTIONS: tuple[LaxasFitSensorEntityDescription, ...] = (
         key="blood_pressure_dia",
         name="Blood Pressure Diastolic",
         icon="mdi:heart",
-        device_class=SensorDeviceClass.BLOOD_PRESSURE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement="mmHg",
         value_fn=lambda c: c.ble.state.blood_pressure_dia,
@@ -84,7 +88,6 @@ SENSOR_DESCRIPTIONS: tuple[LaxasFitSensorEntityDescription, ...] = (
         key="spo2",
         name="Blood Oxygen",
         icon="mdi:water-percent",
-        device_class=SensorDeviceClass.OXYGEN_SATURATION,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement="%",
         value_fn=lambda c: c.ble.state.spo2,
@@ -93,7 +96,7 @@ SENSOR_DESCRIPTIONS: tuple[LaxasFitSensorEntityDescription, ...] = (
         key="temperature",
         name="Body Temperature",
         icon="mdi:thermometer",
-        device_class=SensorDeviceClass.TEMPERATURE,
+        device_class=_SDC_TEMP,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement="°C",
         value_fn=lambda c: c.ble.state.temperature,
@@ -102,7 +105,7 @@ SENSOR_DESCRIPTIONS: tuple[LaxasFitSensorEntityDescription, ...] = (
         key="battery",
         name="Battery",
         icon="mdi:battery",
-        device_class=SensorDeviceClass.BATTERY,
+        device_class=_SDC_BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement="%",
         value_fn=lambda c: c.ble.state.battery,
