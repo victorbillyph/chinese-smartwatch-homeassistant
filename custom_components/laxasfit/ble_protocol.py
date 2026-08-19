@@ -105,7 +105,7 @@ class LaxasFitBLE:
         return self._client is not None and self._client.is_connected
 
     async def connect(self, max_retries: int = 6) -> bool:
-        """Connect to the watch with retry logic."""
+        """Connect to the watch with retry + name fallback."""
         async with self._connect_lock:
             for attempt in range(max_retries):
                 try:
@@ -116,6 +116,24 @@ class LaxasFitBLE:
                         dev = await BleakScanner.find_device_by_address(
                             self.address, timeout=CONNECT_TIMEOUT
                         )
+
+                    # Fallback: scan by name if MAC not found
+                    if not dev and self._state.connected is False:
+                        _LOGGER.debug("MAC not found, scanning by name...")
+                        devices = await BleakScanner.discover(timeout=5)
+                        for d in devices:
+                            if d.name and d.name.lower() in (
+                                "watch", "laxasfit", "hryfine"
+                            ):
+                                _LOGGER.info(
+                                    "Found watch by name: %s [%s]",
+                                    d.name, d.address,
+                                )
+                                dev = d
+                                # Update address for next reconnect
+                                self.address = d.address
+                                break
+
                     if not dev:
                         _LOGGER.warning("Watch not found, attempt %d", attempt + 1)
                         await asyncio.sleep(2)

@@ -49,6 +49,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "coordinator": coordinator,
     }
 
+    # Update config entry if fallback changed the address
+    if ble.address.lower() != address.lower():
+        hass.config_entries.async_update_entry(
+            entry, data={**entry.data, "address": ble.address}
+        )
+        _LOGGER.info("Watch address updated: %s → %s", address, ble.address)
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 

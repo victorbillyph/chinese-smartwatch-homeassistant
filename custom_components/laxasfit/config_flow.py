@@ -29,7 +29,10 @@ async def _async_get_devices(hass: HomeAssistant) -> dict[str, str]:
     return {
         f"{d.name or 'Unknown'} [{d.address}]": d.address
         for d in devices
-        if d.name
+        if d.name and any(
+            n in d.name.lower()
+            for n in ("watch", "laxasfit", "hryfine")
+        )
     }
 
 
