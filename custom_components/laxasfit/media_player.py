@@ -12,9 +12,18 @@ import shutil
 import subprocess
 
 from homeassistant.components.media_player import (
+    BrowseMedia,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
+    MediaType,
+    async_process_play_media,
+)
+from homeassistant.components.media_source import (
+    MediaSource,
+    MediaSourceItem,
+    UnresolvedMediaSourceIdentifier,
+    browse_media,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -34,6 +43,8 @@ SUPPORT_FLAGS = (
     | MediaPlayerEntityFeature.VOLUME_SET
     | MediaPlayerEntityFeature.VOLUME_STEP
     | MediaPlayerEntityFeature.VOLUME_MUTE
+    | MediaPlayerEntityFeature.BROWSE_MEDIA
+    | MediaPlayerEntityFeature.PLAY_MEDIA
 )
 
 
@@ -169,4 +180,65 @@ class LaxasFitMediaPlayer(CoordinatorEntity, MediaPlayerEntity):
             state = "on" if mute else "off"
             await asyncio.to_thread(_run_pactl, "set-sink-mute", sink, state)
         self._attr_is_volume_muted = mute
+        self.async_write_ha_state()
+
+    async def async_browse_media(
+        self, media_content_id: str | None = None, media_content_type: str | None = None
+    ) -> BrowseMedia:
+        """Browse media from HA media source."""
+        return await browse_media(
+            self.hass,
+            f"{media_content_type or 'music'}/{media_content_id or ''}",
+        )
+
+    async def async_play_media(
+        self, media_type: str | None, media_id: str | None, **kwargs
+    ) -> None:
+        """Play media through the watch speaker (BT A2DP)."""
+        if not media_id:
+            _LOGGER.warning("No media ID provided")
+            return
+
+        _LOGGER.info("Playing media: %s/%s", media_type, media_id)
+
+        # If it's a media source URI, resolve and play via PulseAudio
+        if media_id.startswith("media-source://"):
+            try:
+                resolved = await async_process_play_media(
+                    self.hass, media_type or "music", media_id
+                )
+                # Play via local media (mpv/gstreamer to BT sink)
+                sink = self._resolve_sink()
+                if sink:
+                    cmd = [
+                        "mpv", "--no-video",
+                        f"--audio-device=pulse/{sink}",
+                        resolved.url,
+                    ]
+                    asyncio.create_subprocess_exec(
+                        *cmd, stdout=asyncio.subprocess.DEVNULL,
+                        stderr=asyncio.subprocess.DEVNULL,
+                    )
+                else:
+                    _LOGGER.warning("BT sink not found, cannot route audio")
+            except Exception as err:
+                _LOGGER.error("Failed to play media source: %s", err)
+        else:
+            # Direct URL - play via mpv to BT sink
+            sink = self._resolve_sink()
+            if sink:
+                cmd = [
+                    "mpv", "--no-video",
+                    f"--audio-device=pulse/{sink}",
+                    media_id,
+                ]
+                asyncio.create_subprocess_exec(
+                    *cmd, stdout=asyncio.subprocess.DEVNULL,
+                    stderr=asyncio.subprocess.DEVNULL,
+                )
+            else:
+                # Fallback: just send play command via BLE
+                await self.coordinator.ble.music_control("play")
+
+        self._attr_state = MediaPlayerState.PLAYING
         self.async_write_ha_state()
