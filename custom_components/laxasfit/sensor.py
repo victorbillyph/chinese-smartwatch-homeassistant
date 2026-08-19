@@ -12,11 +12,6 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
-    PERCENTAGE,
-    UnitOfLength,
-    UnitOfTime,
-)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -47,14 +42,13 @@ SENSOR_DESCRIPTIONS: tuple[LaxasFitSensorEntityDescription, ...] = (
         icon="mdi:map-marker-distance",
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=UnitOfLength.METERS,
+        native_unit_of_measurement="m",
         value_fn=lambda c: c.ble.state.distance,
     ),
     LaxasFitSensorEntityDescription(
         key="calories",
         name="Calories",
         icon="mdi:fire",
-        device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement="kcal",
         value_fn=lambda c: c.ble.state.calories,
@@ -88,7 +82,7 @@ SENSOR_DESCRIPTIONS: tuple[LaxasFitSensorEntityDescription, ...] = (
         name="Blood Oxygen",
         icon="mdi:water-percent",
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=PERCENTAGE,
+        native_unit_of_measurement="%",
         value_fn=lambda c: c.ble.state.spo2,
     ),
     LaxasFitSensorEntityDescription(
@@ -106,25 +100,23 @@ SENSOR_DESCRIPTIONS: tuple[LaxasFitSensorEntityDescription, ...] = (
         icon="mdi:battery",
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=PERCENTAGE,
+        native_unit_of_measurement="%",
         value_fn=lambda c: c.ble.state.battery,
     ),
     LaxasFitSensorEntityDescription(
         key="deep_sleep",
         name="Deep Sleep",
         icon="mdi:sleep",
-        device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=UnitOfTime.MINUTES,
+        native_unit_of_measurement="min",
         value_fn=lambda c: c.ble.state.deep_sleep_min,
     ),
     LaxasFitSensorEntityDescription(
         key="light_sleep",
         name="Light Sleep",
         icon="mdi:sleep",
-        device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=UnitOfTime.MINUTES,
+        native_unit_of_measurement="min",
         value_fn=lambda c: c.ble.state.light_sleep_min,
     ),
     LaxasFitSensorEntityDescription(
@@ -145,9 +137,8 @@ SENSOR_DESCRIPTIONS: tuple[LaxasFitSensorEntityDescription, ...] = (
         key="sport_duration",
         name="Sport Duration",
         icon="mdi:timer",
-        device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=UnitOfTime.SECONDS,
+        native_unit_of_measurement="s",
         value_fn=lambda c: c.ble.state.sport_duration,
     ),
 )

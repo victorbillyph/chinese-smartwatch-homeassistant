@@ -1,7 +1,4 @@
-"""Notification platform for LaxasFit BLE Watch.
-
-Send notifications directly to the watch screen via HA notification service.
-"""
+"""Notification platform for LaxasFit BLE Watch."""
 from __future__ import annotations
 
 import logging
@@ -14,20 +11,45 @@ from homeassistant.components.notify import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_get_service(
+async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry | None,
-    discovery_info: None = None,
-) -> LaxasFitNotificationService | None:
-    if config_entry is None:
-        return None
-    return LaxasFitNotificationService(hass, config_entry)
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up LaxasFit notify platform."""
+    # Notify is a service, not an entity platform.
+    # We register the service here.
+    async def async_send_to_watch(call):
+        """Handle the send_to_watch service call."""
+        message = call.data.get("message", "")
+        title = call.data.get("title", "HA")
+        msg_type = call.data.get("type", "other")
+
+        data = hass.data[DOMAIN].get(entry.entry_id)
+        if not data:
+            _LOGGER.warning("Watch not configured")
+            return
+
+        ble = data["ble"]
+        if not ble.connected:
+            _LOGGER.warning("Watch not connected")
+            return
+
+        await ble.send_notification(msg_type, title, message)
+
+    hass.services.async_register(
+        DOMAIN,
+        "send_notification",
+        async_send_to_watch,
+        schema=None,
+    )
 
 
 class LaxasFitNotificationService(BaseNotificationService):
